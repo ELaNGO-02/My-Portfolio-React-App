@@ -2,28 +2,19 @@ import { useState, useRef, useEffect, Suspense } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { Preload } from "@react-three/drei";
 import * as THREE from "three";
+import { random } from "maath";
 
 const Stars = () => {
   const ref = useRef<THREE.Points>(null);
 
-  // Generate star positions in a circle/disk
+  // Generate star positions
   const [positions] = useState<Float32Array>(() => {
-    const numPoints = 2666; // 2666 points
-    const arr = new Float32Array(numPoints * 3);
-
-    const radius = 1.5;
-    for (let i = 0; i < numPoints; i++) {
-      const angle = Math.random() * Math.PI * 2; // full circle
-      const r = Math.sqrt(Math.random()) * radius; // uniform in disk
-      arr[i * 3] = r * Math.cos(angle);           // x
-      arr[i * 3 + 1] = r * Math.sin(angle);       // y
-      arr[i * 3 + 2] = (Math.random() - 0.5) * 0.1; // small Z variance
-    }
-
-    return arr;
+    const arr = new Float32Array(8000); // 8000 floats = ~2666 points
+    const { array } = random.inSphere(arr, { radius: 1.5 });
+    return array ?? arr; // fallback just in case
   });
 
-  // Generate star colors
+  // Generate colors after positions are ready
   const [colors, setColors] = useState<Float32Array>(new Float32Array(0));
   useEffect(() => {
     const arr = new Float32Array(positions.length);
@@ -40,12 +31,13 @@ const Stars = () => {
   // Rotate the star field slowly
   useFrame((_state, delta) => {
     if (ref.current) {
-      ref.current.rotation.z += delta / 10; // rotate around Z for circular effect
+      ref.current.rotation.x -= delta / 15;
+      ref.current.rotation.y -= delta / 25;
     }
   });
 
   return (
-    <group rotation={[0, 0, 0]}>
+    <group rotation={[0, 0, Math.PI / 4]}>
       <points ref={ref}>
         <bufferGeometry>
           <bufferAttribute
@@ -79,7 +71,7 @@ const Stars = () => {
 const StarsCanvas = () => {
   return (
     <div className="absolute inset-0 z-[-1] h-auto w-full">
-      <Canvas camera={{ position: [0, 0, 2] }} gl={{ alpha: true, antialias: true }}>
+      <Canvas camera={{ position: [0, 0, 1] }} gl={{ alpha: true, antialias: true }}>
         <Suspense fallback={null}>
           <Stars />
         </Suspense>

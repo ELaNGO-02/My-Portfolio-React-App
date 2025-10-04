@@ -16,7 +16,7 @@ import {
   SiGit,
   SiPostman,
   SiLinux,
-  SiDotnet, // C#
+  SiDotnet, 
 } from "react-icons/si";
 import { FaMicrosoft, FaNodeJs } from 'react-icons/fa';
 

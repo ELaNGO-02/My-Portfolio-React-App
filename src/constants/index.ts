@@ -151,8 +151,8 @@ const projects: TProject[] = [
         color: "purple-text-gradient",
       },
     ],
-    image: eida, // Replace with your image import
-    sourceCodeLink: "https://github.com/", // Optional: link to repo or demo
+    image: eida, 
+    sourceCodeLink: "https://github.com/ELaNGO-02/Eida", 
   },
   {
     name: "EyeNavCursor",
@@ -172,8 +172,8 @@ const projects: TProject[] = [
         color: "pink-text-gradient",
       },
     ],
-    image: eyenav, // Replace with your image import
-    sourceCodeLink: "https://github.com/", // Optional: link to repo
+    image: eyenav, 
+    sourceCodeLink: "https://github.com/ELaNGO-02/EyeNavCursor", 
   },
   {
     name: "Market Basket Insights",
@@ -198,7 +198,7 @@ const projects: TProject[] = [
       },
     ],
     image: market, 
-    sourceCodeLink: "https://github.com/",
+    sourceCodeLink: "https://github.com/ELaNGO-02/Market-Basket-Insights",
   },
 ];
 

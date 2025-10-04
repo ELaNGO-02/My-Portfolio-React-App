@@ -65,7 +65,7 @@ const ProjectCard: React.FC<{ index: number } & TProject> = ({
 
 const Works = () => {
   return (
-    <>
+    <div id="projects">
       <Header useMotion={true} {...config.sections.works} />
 
       <div className="flex w-full">
@@ -82,7 +82,7 @@ const Works = () => {
           <ProjectCard key={`project-${index}`} index={index} {...project} />
         ))}
       </div>
-    </>
+    </div>
   );
 };
 

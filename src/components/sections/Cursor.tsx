@@ -8,7 +8,7 @@ const FluidCursor: React.FC = () => {
 
   useEffect(() => {
     const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d", { alpha: true })!; // ✅ Allow transparency
+    const ctx = canvas.getContext("2d", { alpha: true })!; 
     let animationFrameId: number;
 
     canvas.width = window.innerWidth;
@@ -76,7 +76,7 @@ const FluidCursor: React.FC = () => {
     }
 
     const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height); // ✅ Transparent background
+      ctx.clearRect(0, 0, canvas.width, canvas.height); 
 
       particles.forEach((p, i) => {
         p.update();
