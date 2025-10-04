@@ -8,10 +8,10 @@ const Stars = () => {
   const ref = useRef<THREE.Points>(null);
 
   // Generate star positions
-  const [positions] = useState<Float32Array>(() => {
+  const [positions] = useState<Float32Array>((): any=> {
     const arr = new Float32Array(8000); // 8000 floats = ~2666 points
-    const { array } = random.inSphere(arr, { radius: 1.5 });
-    return array ?? arr; // fallback just in case
+    const  pos = random.inSphere(arr, { radius: 1.5 });
+    return pos  ?? arr; // fallback just in case
   });
 
   // Generate colors after positions are ready

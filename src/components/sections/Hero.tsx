@@ -447,7 +447,6 @@ import * as THREE from 'three';
 
 const HeroBanner: React.FC = () => {
   const mountRef = useRef<HTMLDivElement>(null);
-  const [loading, setLoading] = useState(true);
   const [glitchText, setGlitchText] = useState(false);
   const frameRef = useRef<number>(0);
   const sphereRef = useRef<THREE.Mesh | null>(null);
@@ -630,7 +629,7 @@ const HeroBanner: React.FC = () => {
       core.rotation.y = -elapsedTime * 0.7;
       
       // Animate rings
-      rings.forEach((ring, i) => {
+      rings.forEach((ring) => {
         ring.mesh.rotation.x += ring.speed;
         ring.mesh.rotation.y += ring.speed * 0.5;
         ring.mesh.rotation.z += ring.speed * 0.3;
@@ -663,7 +662,6 @@ const HeroBanner: React.FC = () => {
     };
     
     animate();
-    setLoading(false);
 
     // Handle resize
     const handleResize = () => {
@@ -816,7 +814,7 @@ const HeroBanner: React.FC = () => {
 
       <div className="scanline"></div>
       
-      <style jsx>{`
+      <style>{`
         @keyframes glitch-1 {
           0%, 100% { transform: translate(0); }
           20% { transform: translate(-2px, 2px); }

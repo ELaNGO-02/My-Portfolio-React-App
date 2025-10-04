@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { Float, OrbitControls, Stars } from "@react-three/drei";
+import { Float, OrbitControls} from "@react-three/drei";
 
 const Hero3D = () => {
   return (

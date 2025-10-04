@@ -1,5 +1,4 @@
-import { BrowserRouter } from "react-router-dom";
-
+import { HashRouter } from "react-router-dom";
 import {
   About,
   Contact,
@@ -15,7 +14,7 @@ import { useEffect } from "react";
 import { config } from "./constants/config";
 import Awards from "./components/sections/Awards";
 import Footer from "./components/sections/Footer";
-import Cursor from "./components/sections/Cursor"
+import Cursor from "./components/sections/Cursor";
 
 const App = () => {
   useEffect(() => {
@@ -25,26 +24,30 @@ const App = () => {
   }, []);
 
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div className="bg-primary relative z-0">
-        <Cursor/>
+        <Cursor />
+
         <div className="bg-hero-pattern bg-cover bg-center bg-no-repeat">
           <Navbar />
           <Hero />
         </div>
+
         <About />
         <Experience />
         <Tech />
         <Works />
-        <Awards/>
+        <Awards />
         <Feedbacks />
+
         <div className="relative z-0">
           <Contact />
           <StarsCanvas />
         </div>
-        <Footer/>
+
+        <Footer />
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 };
 
