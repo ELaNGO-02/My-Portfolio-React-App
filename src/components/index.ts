@@ -4,6 +4,7 @@ import {
   BallCanvas,
   ComputersCanvas,
   StarsCanvas,
+  Scene3D,
 } from "./canvas";
 import Hero from "./sections/Hero";
 import Navbar from "./layout/Navbar";
@@ -29,4 +30,5 @@ export {
   BallCanvas,
   ComputersCanvas,
   StarsCanvas,
+  Scene3D,
 };

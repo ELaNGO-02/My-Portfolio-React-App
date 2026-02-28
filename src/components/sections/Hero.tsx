@@ -1,438 +1,420 @@
 import React, { useRef, useEffect, useState } from 'react';
 import * as THREE from 'three';
+import { motion, AnimatePresence } from 'framer-motion';
 
-const HeroBanner: React.FC = () => {
-  const mountRef = useRef<HTMLDivElement>(null);
-  const [glitchText, setGlitchText] = useState(false);
-  const frameRef = useRef<number>(0);
-  const sphereRef = useRef<THREE.Mesh | null>(null);
-  const starsRef = useRef<THREE.Points | null>(null);
+/* ────────────── Typing animation hook ────────────── */
+const useTypingEffect = (strings: string[], typingSpeed = 80, deletingSpeed = 40, pauseTime = 2000) => {
+  const [text, setText] = useState('');
+  const [stringIndex, setStringIndex] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (!mountRef.current) return;
+    const current = strings[stringIndex];
+    let timeout: ReturnType<typeof setTimeout>;
+    if (!isDeleting && text === current) {
+      timeout = setTimeout(() => setIsDeleting(true), pauseTime);
+    } else if (isDeleting && text === '') {
+      setIsDeleting(false);
+      setStringIndex((prev) => (prev + 1) % strings.length);
+    } else {
+      timeout = setTimeout(
+        () => setText(isDeleting ? current.substring(0, text.length - 1) : current.substring(0, text.length + 1)),
+        isDeleting ? deletingSpeed : typingSpeed
+      );
+    }
+    return () => clearTimeout(timeout);
+  }, [text, isDeleting, stringIndex, strings, typingSpeed, deletingSpeed, pauseTime]);
+  return text;
+};
 
+/* ────────────── Terminal Window ────────────── */
+const TerminalWindow = ({ children, title = 'terminal' }: { children: React.ReactNode; title?: string }) => (
+  <div className="rounded-2xl border border-white/[0.08] bg-[#0d1117]/60 backdrop-blur-2xl shadow-[0_8px_60px_rgba(145,94,255,0.12)] overflow-hidden">
+    <div className="flex items-center gap-2 px-4 py-2.5 bg-[#161b22]/50 border-b border-white/5">
+      <div className="flex gap-1.5">
+        <div className="w-3 h-3 rounded-full bg-[#ff5f57]" />
+        <div className="w-3 h-3 rounded-full bg-[#febc2e]" />
+        <div className="w-3 h-3 rounded-full bg-[#28c840]" />
+      </div>
+      <span className="ml-2 text-[11px] text-gray-500 font-mono">{title}</span>
+    </div>
+    <div className="p-4 sm:p-5 font-mono text-[12px] sm:text-[13px] leading-relaxed">{children}</div>
+  </div>
+);
+
+/* ════════════════════════════════════════════════════
+   HERO — Spectacular 3-D Scene
+   ════════════════════════════════════════════════════ */
+const HeroBanner: React.FC = () => {
+  const mountRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<number>(0);
+  const typed = useTypingEffect(
+    ['Full Stack Developer', 'BigCommerce Expert', 'React & Next.js', 'E-Commerce Architect', 'UI/UX Enthusiast'],
+    90, 50, 2200
+  );
+  const [showTerminal, setShowTerminal] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowTerminal(true), 600);
+    return () => clearTimeout(t);
+  }, []);
+
+  /* ─── Three.js scene ──────────────────────────── */
+  useEffect(() => {
+    if (!mountRef.current) return;
+    const isMobile = window.innerWidth < 768;
 
     const scene = new THREE.Scene();
-    scene.fog = new THREE.FogExp2(0x000000, 0.001);
-    
-    const camera = new THREE.PerspectiveCamera(
-      55,
-      window.innerWidth / window.innerHeight,
-      0.1,
-      1000
-    );
-    camera.position.set(0, 0, 20);
-    
-    const renderer = new THREE.WebGLRenderer({ 
-      antialias: true,
+    scene.fog = new THREE.FogExp2(0x05060f, 0.008);
+
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 0, isMobile ? 28 : 22);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: !isMobile,
       alpha: true,
-      powerPreference: "high-performance"
+      powerPreference: 'high-performance',
     });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.5;
+    renderer.toneMappingExposure = 1.6;
     mountRef.current.appendChild(renderer.domElement);
 
+    /* ═══ CENTERPIECE: TorusKnot ═══ */
+    const knotGeo = new THREE.TorusKnotGeometry(3.8, 1.05, 220, 36, 2, 3);
 
-    const light1 = new THREE.DirectionalLight(0x00ffff, 1);
-    light1.position.set(1, 1, 1);
-    scene.add(light1);
-    
-    const light2 = new THREE.DirectionalLight(0xff00ff, 1);
-    light2.position.set(-1, -1, 1);
-    scene.add(light2);
-    
-    const ambientLight = new THREE.AmbientLight(0x0066ff, 0.5);
-    scene.add(ambientLight);
+    const knotWire = new THREE.Mesh(
+      knotGeo,
+      new THREE.MeshBasicMaterial({ color: 0x915eff, wireframe: true, transparent: true, opacity: 0.18 })
+    );
+    scene.add(knotWire);
 
-    // Create main holographic sphere with vertex shader effects
-    const sphereGeometry = new THREE.IcosahedronGeometry(4, 30);
-    const sphereMaterial = new THREE.MeshPhongMaterial({
-      color: 0x000000,
-      emissive: 0x1a1a2e,
-      emissiveIntensity: 0.5,
-      shininess: 100,
-      specular: 0x00ffff,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.3,
-    });
-    
-    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
-    sphereRef.current = sphere;
-    scene.add(sphere);
+    const knotSolid = new THREE.Mesh(
+      knotGeo,
+      new THREE.MeshPhongMaterial({
+        color: 0x4a1d96,
+        emissive: 0x915eff,
+        emissiveIntensity: 0.12,
+        transparent: true,
+        opacity: 0.06,
+        side: THREE.DoubleSide,
+      })
+    );
+    scene.add(knotSolid);
 
-    // Inner glowing core
-    const coreGeometry = new THREE.SphereGeometry(3.5, 32, 32);
-    const coreMaterial = new THREE.MeshBasicMaterial({
-      color: 0x00ffff,
-      transparent: true,
-      opacity: 0.1,
-    });
-    const core = new THREE.Mesh(coreGeometry, coreMaterial);
-    sphere.add(core);
+    /* ═══ ENERGY CORE ═══ */
+    const core = new THREE.Mesh(
+      new THREE.SphereGeometry(2.8, 32, 32),
+      new THREE.MeshBasicMaterial({ color: 0x915eff, transparent: true, opacity: 0.045 })
+    );
+    scene.add(core);
 
-    // Create particle field
-    const starsGeometry = new THREE.BufferGeometry();
-    const starCount = 5000;
-    const positions = new Float32Array(starCount * 3);
-    const colors = new Float32Array(starCount * 3);
-    
-    for (let i = 0; i < starCount; i++) {
+    const shell = new THREE.Mesh(
+      new THREE.SphereGeometry(5.5, 32, 32),
+      new THREE.MeshBasicMaterial({ color: 0x915eff, transparent: true, opacity: 0.018, side: THREE.BackSide })
+    );
+    scene.add(shell);
+
+    /* ═══ GALAXY SPIRAL ═══ */
+    const gCount = isMobile ? 5000 : 12000;
+    const gGeo = new THREE.BufferGeometry();
+    const gPos = new Float32Array(gCount * 3);
+    const gCol = new Float32Array(gCount * 3);
+    const arms = 4;
+    const armAngle = (Math.PI * 2) / arms;
+
+    for (let i = 0; i < gCount; i++) {
       const i3 = i * 3;
-      positions[i3] = (Math.random() - 0.5) * 100;
-      positions[i3 + 1] = (Math.random() - 0.5) * 100;
-      positions[i3 + 2] = (Math.random() - 0.5) * 100;
-      
-      const color = new THREE.Color();
-      color.setHSL(Math.random() * 0.2 + 0.5, 1, 0.5);
-      colors[i3] = color.r;
-      colors[i3 + 1] = color.g;
-      colors[i3 + 2] = color.b;
+      const armIdx = i % arms;
+      const radius = Math.pow(Math.random(), 0.55) * 50 + 3;
+      const spin = radius * 0.22;
+      const branch = armAngle * armIdx;
+      const scatter = radius * 0.08;
+
+      gPos[i3]     = Math.cos(branch + spin) * radius + (Math.random() - 0.5) * scatter * 2;
+      gPos[i3 + 1] = (Math.pow(Math.random(), 3) * (Math.random() < 0.5 ? 1 : -1)) * 2.5;
+      gPos[i3 + 2] = Math.sin(branch + spin) * radius + (Math.random() - 0.5) * scatter * 2;
+
+      const c = new THREE.Color();
+      c.lerpColors(new THREE.Color(0x915eff), new THREE.Color(0x00bfff), Math.min(radius / 50, 1));
+      gCol[i3] = c.r; gCol[i3 + 1] = c.g; gCol[i3 + 2] = c.b;
     }
-    
-    starsGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-    starsGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    
-    const starsMaterial = new THREE.PointsMaterial({
-      size: 0.5,
+
+    gGeo.setAttribute('position', new THREE.BufferAttribute(gPos, 3));
+    gGeo.setAttribute('color', new THREE.BufferAttribute(gCol, 3));
+
+    const galaxy = new THREE.Points(gGeo, new THREE.PointsMaterial({
+      size: isMobile ? 0.22 : 0.13,
       vertexColors: true,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.75,
       blending: THREE.AdditiveBlending,
-    });
-    
-    const stars = new THREE.Points(starsGeometry, starsMaterial);
-    starsRef.current = stars;
-    scene.add(stars);
+      depthWrite: false,
+      sizeAttenuation: true,
+    }));
+    galaxy.rotation.x = Math.PI * 0.1;
+    scene.add(galaxy);
 
-    // Create orbiting rings
-    const createRing = (radius: number, color: number, speed: number) => {
-      const ringGeometry = new THREE.TorusGeometry(radius, 0.05, 16, 100);
-      const ringMaterial = new THREE.MeshBasicMaterial({
-        color: color,
-        transparent: true,
-        opacity: 0.3,
-      });
-      const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-      ring.rotation.x = Math.random() * Math.PI;
-      ring.rotation.y = Math.random() * Math.PI;
-      return { mesh: ring, speed };
-    };
-
-    const rings = [
-      createRing(5, 0x00ffff, 0.002),
-      createRing(6, 0xff00ff, -0.003),
-      createRing(7, 0xffff00, 0.004),
+    /* ═══ ORBITAL RINGS ═══ */
+    const ringData = [
+      { r: 6,   color: 0x915eff, speed:  0.004,  tX: 1.1, tY: 0.6 },
+      { r: 7.8, color: 0x00bfff, speed: -0.003,  tX: 0.7, tY: 1.4 },
+      { r: 10,  color: 0x915eff, speed:  0.002,  tX: 1.9, tY: 0.2 },
+      { r: 12,  color: 0x00bfff, speed: -0.0015, tX: 0.3, tY: 1.7 },
+      { r: 14.5,color: 0x915eff, speed:  0.001,  tX: 1.4, tY: 1.0 },
     ];
-    
-    rings.forEach(r => scene.add(r.mesh));
 
-    // Data visualization elements - floating code blocks
-    const codeBlocks: THREE.Mesh[] = [];
-    const blockGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-    
-    for (let i = 0; i < 20; i++) {
-      const blockMaterial = new THREE.MeshPhongMaterial({
-        color: new THREE.Color().setHSL(Math.random() * 0.3 + 0.5, 1, 0.5),
-        emissive: new THREE.Color().setHSL(Math.random() * 0.3 + 0.5, 1, 0.3),
+    const rings = ringData.map((d) => {
+      const mesh = new THREE.Mesh(
+        new THREE.TorusGeometry(d.r, 0.025, 16, 220),
+        new THREE.MeshBasicMaterial({ color: d.color, transparent: true, opacity: 0.2 })
+      );
+      mesh.rotation.set(d.tX, d.tY, 0);
+      scene.add(mesh);
+      return { mesh, speed: d.speed };
+    });
+
+    /* ═══ DEBRIS FIELD ═══ */
+    const debrisGeos = [
+      new THREE.TetrahedronGeometry(0.18, 0),
+      new THREE.OctahedronGeometry(0.14, 0),
+      new THREE.BoxGeometry(0.2, 0.2, 0.2),
+      new THREE.IcosahedronGeometry(0.12, 0),
+    ];
+    const debrisCount = isMobile ? 12 : 40;
+    const debris: THREE.Mesh[] = [];
+
+    for (let i = 0; i < debrisCount; i++) {
+      const geo = debrisGeos[i % debrisGeos.length];
+      const mat = new THREE.MeshPhongMaterial({
+        color: new THREE.Color().setHSL(0.68 + Math.random() * 0.22, 0.9, 0.52),
+        emissive: new THREE.Color().setHSL(0.68 + Math.random() * 0.22, 0.9, 0.18),
         transparent: true,
-        opacity: 0.6,
+        opacity: 0.65,
       });
-      const block = new THREE.Mesh(blockGeometry, blockMaterial);
-      block.position.set(
-        (Math.random() - 0.5) * 20,
-        (Math.random() - 0.5) * 20,
-        (Math.random() - 0.5) * 20
+      const m = new THREE.Mesh(geo, mat);
+      m.position.set(
+        (Math.random() - 0.5) * 34,
+        (Math.random() - 0.5) * 22,
+        (Math.random() - 0.5) * 18
       );
-      block.rotation.set(
-        Math.random() * Math.PI,
-        Math.random() * Math.PI,
-        Math.random() * Math.PI
-      );
-      codeBlocks.push(block);
-      scene.add(block);
+      m.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      debris.push(m);
+      scene.add(m);
     }
 
-    let mouseX = 0;
-    let mouseY = 0;
-    
-    const handleMouseMove = (event: MouseEvent) => {
-      mouseX = (event.clientX / window.innerWidth) * 2 - 1;
-      mouseY = -(event.clientY / window.innerHeight) * 2 + 1;
-    };
-    window.addEventListener('mousemove', handleMouseMove);
+    /* ═══ LIGHTING ═══ */
+    scene.add(new THREE.AmbientLight(0x1a1a3e, 0.35));
 
-    // Animation loop
+    const coreLight = new THREE.PointLight(0x915eff, 4, 35);
+    scene.add(coreLight);
+
+    const accent1 = new THREE.PointLight(0x00bfff, 2.5, 45);
+    accent1.position.set(12, 6, 6);
+    scene.add(accent1);
+
+    const accent2 = new THREE.PointLight(0x915eff, 2, 40);
+    accent2.position.set(-10, -5, 9);
+    scene.add(accent2);
+
+    /* ═══ MOUSE ═══ */
+    let mouseX = 0, mouseY = 0;
+    const onMove = (e: MouseEvent) => {
+      mouseX = (e.clientX / window.innerWidth) * 2 - 1;
+      mouseY = -(e.clientY / window.innerHeight) * 2 + 1;
+    };
+    window.addEventListener('mousemove', onMove);
+
+    /* ═══ ANIMATION LOOP ═══ */
     const clock = new THREE.Clock();
-    
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate);
-      const elapsedTime = clock.getElapsedTime();
-      
+      const t = clock.getElapsedTime();
 
-      if (sphereRef.current) {
-        sphereRef.current.rotation.x = elapsedTime * 0.1;
-        sphereRef.current.rotation.y = elapsedTime * 0.15;
-        sphereRef.current.scale.x = 1 + Math.sin(elapsedTime * 2) * 0.05;
-        sphereRef.current.scale.y = 1 + Math.sin(elapsedTime * 2) * 0.05;
-        sphereRef.current.scale.z = 1 + Math.sin(elapsedTime * 2) * 0.05;
-      }
+      // TorusKnot morph
+      knotWire.rotation.x = t * 0.07;
+      knotWire.rotation.y = t * 0.11;
+      knotSolid.rotation.copy(knotWire.rotation);
+      const breathe = 1 + Math.sin(t * 0.7) * 0.045;
+      knotWire.scale.setScalar(breathe);
+      knotSolid.scale.setScalar(breathe);
 
-      core.rotation.x = -elapsedTime * 0.5;
-      core.rotation.y = -elapsedTime * 0.7;
-      
-      // Animate rings
-      rings.forEach((ring) => {
-        ring.mesh.rotation.x += ring.speed;
-        ring.mesh.rotation.y += ring.speed * 0.5;
-        ring.mesh.rotation.z += ring.speed * 0.3;
+      // Core pulse
+      (core.material as THREE.MeshBasicMaterial).opacity = 0.035 + Math.sin(t * 1.8) * 0.025;
+      coreLight.intensity = 3 + Math.sin(t * 1.8) * 2;
+
+      // Shell breathe
+      const sb = 1 + Math.sin(t * 0.4) * 0.12;
+      shell.scale.setScalar(sb);
+
+      // Galaxy rotation
+      galaxy.rotation.y = t * 0.012;
+
+      // Rings
+      rings.forEach((r) => { r.mesh.rotation.z += r.speed; });
+
+      // Debris
+      debris.forEach((d, i) => {
+        d.rotation.x += 0.003 + i * 0.00008;
+        d.rotation.y += 0.004 + i * 0.00008;
+        d.position.y += Math.sin(t * 0.25 + i * 0.8) * 0.002;
       });
-      
-      // Animate code blocks
-      codeBlocks.forEach((block, i) => {
-        block.position.y += Math.sin(elapsedTime + i) * 0.002;
-        block.position.x += Math.cos(elapsedTime + i) * 0.001;
-        block.rotation.x += 0.01;
-        block.rotation.y += 0.01;
-        
-        // Pulse effect
-        const scale = 1 + Math.sin(elapsedTime * 3 + i) * 0.1;
-        block.scale.set(scale, scale, scale);
-      });
-      
-      // Rotate stars
-      if (starsRef.current) {
-        starsRef.current.rotation.x = elapsedTime * 0.05;
-        starsRef.current.rotation.y = elapsedTime * 0.075;
-      }
-      
-      // Mouse interaction
-      camera.position.x += (mouseX * 2 - camera.position.x) * 0.02;
-      camera.position.y += (mouseY * 2 - camera.position.y) * 0.02;
-      camera.lookAt(scene.position);
-      
+
+      // Camera follows mouse
+      camera.position.x += (mouseX * 4 - camera.position.x) * 0.018;
+      camera.position.y += (mouseY * 2.5 - camera.position.y) * 0.018;
+      camera.lookAt(0, 0, 0);
+
       renderer.render(scene, camera);
     };
-    
     animate();
 
-    // Handle resize
-    const handleResize = () => {
+    const onResize = () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     };
-    window.addEventListener('resize', handleResize);
-
-    // Glitch effect timer
-    const glitchInterval = setInterval(() => {
-      setGlitchText(true);
-      setTimeout(() => setGlitchText(false), 200);
-    }, 5000);
+    window.addEventListener('resize', onResize);
 
     return () => {
-      if (frameRef.current) {
-        cancelAnimationFrame(frameRef.current);
-      }
-      window.removeEventListener('resize', handleResize);
-      window.removeEventListener('mousemove', handleMouseMove);
-      clearInterval(glitchInterval);
-      if (mountRef.current && renderer.domElement) {
-        mountRef.current.removeChild(renderer.domElement);
-      }
+      cancelAnimationFrame(frameRef.current);
+      window.removeEventListener('resize', onResize);
+      window.removeEventListener('mousemove', onMove);
+      if (mountRef.current && renderer.domElement) mountRef.current.removeChild(renderer.domElement);
       renderer.dispose();
     };
   }, []);
 
+  /* ═══════════ JSX ═══════════ */
   return (
-    <div className="relative w-full h-screen bg-black overflow-hidden">
-      {/* 3D Canvas */}
-      <div ref={mountRef} className="absolute inset-0 opacity-90" />
-      
-      {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent pointer-events-none" />
-      
-      {/* Content Overlay */}
-      <div className="relative z-10 h-full flex items-center justify-center px-6">
-        <div className="max-w-6xl mx-auto text-center">
-          {/* Terminal-style header */}
-          <div className="mb-8 font-mono text-xs text-cyan-400 opacity-70 tracking-wider">
-            <span className="animate-pulse">[SYSTEM INITIALIZED]</span>
-            <span className="mx-4">|</span>
-            <span>PORTFOLIO.v2.0</span>
-          </div>
-          
-          {/* Glitch effect name */}
-          <div className="relative mb-6">
-            <h1 
-              className={`text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter ${
-                glitchText ? 'glitch' : ''
-              }`}
-            >
-              <span className="relative inline-block">
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-600">
+    <section className="relative w-full h-screen overflow-hidden">
+      {/* Three.js Canvas */}
+      <div ref={mountRef} className="absolute inset-0" />
+
+      {/* Depth overlays */}
+      <div className="absolute inset-0 bg-gradient-to-t from-[#05060f] via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-b from-[#05060f]/20 via-transparent to-transparent pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-r from-[#05060f]/30 via-transparent to-[#05060f]/30 pointer-events-none" />
+
+      {/* Content */}
+      <div className="relative z-10 h-full flex items-center px-4 sm:px-6">
+        <div className="max-w-5xl w-full mx-auto">
+          {/* Status bar */}
+          <motion.div
+            className="flex items-center gap-3 mb-6 sm:mb-8 font-mono text-[10px] sm:text-xs text-[#915EFF]/80 tracking-widest"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.7)]" />
+            <span>AVAILABLE FOR WORK</span>
+            <span className="hidden sm:inline mx-2 text-white/10">|</span>
+            <span className="hidden sm:inline text-white/30">portfolio@v3.0</span>
+          </motion.div>
+
+          {/* Name & tagline */}
+          <motion.div initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, delay: 0.4 }}>
+            <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl font-black tracking-tight leading-[0.95]">
+              <span className="text-white drop-shadow-[0_0_25px_rgba(255,255,255,0.15)]">Hi, I'm</span>
+              <br />
+              <span className="relative inline-block mt-2">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#915EFF] via-[#b794f6] to-[#00bfff] drop-shadow-[0_0_40px_rgba(145,94,255,0.4)]">
                   ELANGO T
                 </span>
-                <span className="absolute top-0 left-0 text-red-500 opacity-50 animate-glitch-1" aria-hidden="true">
-                  ELANGO T
-                </span>
-                <span className="absolute top-0 left-0 text-cyan-500 opacity-50 animate-glitch-2" aria-hidden="true">
-                  ELANGO T
-                </span>
-              </span>
-              <span className="block text-4xl md:text-6xl lg:text-7xl mt-2 text-white">
-                Code. Design. Innovate
+                <span className="absolute -inset-x-6 -inset-y-4 bg-gradient-to-r from-[#915EFF]/15 to-[#00bfff]/15 blur-3xl -z-10 rounded-3xl animate-pulse" />
               </span>
             </h1>
-          </div>
-          
-          {/* Animated role with typewriter effect */}
-          <div className="mb-8">
-            <div className="inline-block px-6 py-2 border border-cyan-500/30 bg-cyan-500/5 rounded-full mb-4">
-              <p className="text-cyan-400 font-mono text-sm tracking-widest">
-                &lt;FULLSTACK_DEVELOPER /&gt;
-              </p>
+            <div className="mt-4 sm:mt-6 flex items-center gap-2 font-mono text-base sm:text-xl md:text-2xl text-gray-300">
+              <span className="text-[#915EFF]">{'>'}</span>
+              <span>{typed}</span>
+              <span className="inline-block w-[2px] h-5 sm:h-7 bg-[#915EFF] animate-[blink_1s_step-end_infinite]" />
             </div>
-            
-            <div className="flex flex-wrap justify-center gap-4 text-sm">
-              <div className="group relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-cyan-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000"></div>
-                <div className="relative px-4 py-2 bg-black border border-gray-800 rounded-lg">
-                  <span className="text-purple-400 font-mono">BigCommerce Expert</span>
-                </div>
-              </div>
-              <div className="group relative">
-                <div className="absolute -inset-1 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg blur opacity-25 group-hover:opacity-75 transition duration-1000"></div>
-                <div className="relative px-4 py-2 bg-black border border-gray-800 rounded-lg">
-                  <span className="text-cyan-400 font-mono">E-Commerce Developer</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Tech stack with neon effect */}
-          <div className="mb-10 space-y-2">
-            <div className="text-gray-500 text-xs font-mono mb-3">TECH_STACK.init()</div>
-            <div className="flex flex-wrap justify-center gap-2">
-              {[
-                { name: 'React', color: 'from-cyan-500 to-blue-500' },
-                { name: 'TypeScript', color: 'from-blue-500 to-indigo-500' },
-                { name: 'Node.js', color: 'from-green-500 to-emerald-500' },
-                { name: 'BigCommerce', color: 'from-purple-500 to-pink-500' },
-                { name: 'Next.js', color: 'from-gray-400 to-gray-600' },
-                { name: 'MongoDB', color: 'from-green-600 to-lime-500' },
-                { name: 'GraphQL', color: 'from-pink-500 to-rose-500' },
-                { name: 'AWS', color: 'from-orange-500 to-yellow-500' }
-              ].map((tech) => (
-                <span
-                  key={tech.name}
-                  className="group relative cursor-pointer"
-                >
-                  <span className={`absolute inset-0 bg-gradient-to-r ${tech.color} rounded blur-md opacity-50 group-hover:opacity-100 transition-opacity`}></span>
-                  <span className="relative block px-3 py-1 bg-black/80 border border-gray-800 rounded text-xs text-gray-300 hover:text-white transition-colors">
-                    {tech.name}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </div>
-          
-          {/* CTA Buttons with cyber effect */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <button className="group relative px-8 py-4 overflow-hidden">
-              <div className="absolute inset-0 w-full h-full transition duration-300 group-hover:rotate-180">
-                <div className="absolute inset-0 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-lg blur-sm"></div>
-              </div>
-              <span className="relative flex items-center gap-2 px-8 py-3 bg-black border border-cyan-500/50 rounded-lg text-cyan-400 font-bold hover:text-white transition-colors">
-                EXPLORE PROJECTS
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          </motion.div>
+
+          {/* Terminal preview */}
+          <AnimatePresence>
+            {showTerminal && (
+              <motion.div
+                className="mt-8 sm:mt-10 max-w-xl"
+                initial={{ opacity: 0, y: 20, scale: 0.96 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                transition={{ duration: 0.7 }}
+              >
+                <TerminalWindow title="~/elango — zsh">
+                  <div className="space-y-2 text-gray-300">
+                    <p>
+                      <span className="text-emerald-400">elango</span>
+                      <span className="text-white/40">@</span>
+                      <span className="text-[#00bfff]">dev</span>
+                      <span className="text-white/40"> ~ $ </span>
+                      <span className="text-white">whoami</span>
+                    </p>
+                    <p className="text-gray-400">Full Stack Developer | React & BigCommerce Specialist</p>
+                    <p className="mt-2">
+                      <span className="text-emerald-400">elango</span>
+                      <span className="text-white/40">@</span>
+                      <span className="text-[#00bfff]">dev</span>
+                      <span className="text-white/40"> ~ $ </span>
+                      <span className="text-white">cat stack.json</span>
+                    </p>
+                    <div className="text-gray-400">
+                      <span className="text-[#915EFF]">{'{'}</span>{' '}
+                      <span className="text-[#00bfff]">"frontend"</span>:{' '}
+                      <span className="text-emerald-400">"React, Next.js, TS"</span>,
+                      <br />
+                      {'  '}
+                      <span className="text-[#00bfff]">"backend"</span>:{' '}
+                      <span className="text-emerald-400">"Node.js, GraphQL"</span>,
+                      <br />
+                      {'  '}
+                      <span className="text-[#00bfff]">"ecommerce"</span>:{' '}
+                      <span className="text-emerald-400">"BigCommerce, Sitecore"</span>{' '}
+                      <span className="text-[#915EFF]">{'}'}</span>
+                    </div>
+                  </div>
+                </TerminalWindow>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* CTA */}
+          <motion.div
+            className="mt-8 sm:mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.8 }}
+          >
+            <button
+              className="group relative overflow-hidden rounded-xl px-7 py-3.5 font-semibold text-sm shadow-[0_0_30px_rgba(145,94,255,0.25)]"
+              onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-[#915EFF] to-[#00bfff] transition-all duration-300 group-hover:opacity-90" />
+              <span className="relative z-10 flex items-center justify-center gap-2 text-white">
+                View Projects
+                <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </span>
             </button>
-            
-            <button className="group relative px-8 py-3 border border-gray-700 rounded-lg text-gray-400 font-bold hover:text-cyan-400 hover:border-cyan-500/50 transition-all duration-300 bg-black/50 backdrop-blur-sm">
-              <span className="relative z-10">INITIALIZE CONTACT</span>
-              <div className="absolute inset-0 bg-gradient-to-r from-cyan-600/0 via-cyan-600/5 to-cyan-600/0 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-500 rounded-lg"></div>
+            <button
+              className="group rounded-xl border border-white/10 px-7 py-3.5 font-semibold text-sm text-gray-300 hover:text-white hover:border-[#915EFF]/40 hover:bg-[#915EFF]/5 hover:shadow-[0_0_20px_rgba(145,94,255,0.1)] transition-all duration-300 backdrop-blur-sm"
+              onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              Get In Touch
             </button>
-          </div>
-          
-          <div className="mt-12 font-mono text-xs text-green-500/50 overflow-hidden">
-            <div className="animate-matrix-rain">
-              {`01001000 01001001 01010010 01000101 00100000 01001101 01000101`}
+          </motion.div>
+
+          {/* Scroll indicator */}
+          <motion.div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}>
+            <div className="w-5 h-8 rounded-full border-2 border-white/20 flex justify-center">
+              <motion.div className="w-1 h-2 mt-1.5 rounded-full bg-[#915EFF]" animate={{ y: [0, 8, 0], opacity: [1, 0.3, 1] }} transition={{ duration: 1.5, repeat: Infinity }} />
             </div>
-          </div>
+            <span className="text-[10px] font-mono text-white/20 tracking-widest">SCROLL</span>
+          </motion.div>
         </div>
       </div>
-
-      <div className="scanline"></div>
-      
-      <style>{`
-        @keyframes glitch-1 {
-          0%, 100% { transform: translate(0); }
-          20% { transform: translate(-2px, 2px); }
-          40% { transform: translate(-2px, -2px); }
-          60% { transform: translate(2px, 2px); }
-          80% { transform: translate(2px, -2px); }
-        }
-        
-        @keyframes glitch-2 {
-          0%, 100% { transform: translate(0); }
-          20% { transform: translate(2px, -2px); }
-          40% { transform: translate(2px, 2px); }
-          60% { transform: translate(-2px, -2px); }
-          80% { transform: translate(-2px, 2px); }
-        }
-        
-        @keyframes matrix-rain {
-          0% { transform: translateY(-100%); }
-          100% { transform: translateY(100%); }
-        }
-        
-        .animate-glitch-1 {
-          animation: glitch-1 0.3s infinite;
-        }
-        
-        .animate-glitch-2 {
-          animation: glitch-2 0.3s infinite reverse;
-        }
-        
-        .animate-matrix-rain {
-          animation: matrix-rain 20s linear infinite;
-        }
-        
-        .glitch {
-          position: relative;
-          text-shadow: 0.05em 0 0 rgba(255, 0, 0, 0.75),
-                      -0.025em -0.05em 0 rgba(0, 255, 0, 0.75),
-                      0.025em 0.05em 0 rgba(0, 0, 255, 0.75);
-          animation: glitch-effect 0.5s infinite;
-        }
-        
-        @keyframes glitch-effect {
-          0%, 100% { text-shadow: 0.05em 0 0 rgba(255, 0, 0, 0.75), -0.025em -0.05em 0 rgba(0, 255, 0, 0.75), 0.025em 0.05em 0 rgba(0, 0, 255, 0.75); }
-          50% { text-shadow: -0.05em -0.025em 0 rgba(255, 0, 0, 0.75), 0.025em 0.025em 0 rgba(0, 255, 0, 0.75), -0.05em -0.05em 0 rgba(0, 0, 255, 0.75); }
-        }
-        
-        .scanline {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 2px;
-          background: linear-gradient(to bottom, transparent, rgba(0, 255, 255, 0.4), transparent);
-          animation: scanline 8s linear infinite;
-          pointer-events: none;
-        }
-        
-        @keyframes scanline {
-          0% { transform: translateY(0); }
-          100% { transform: translateY(100vh); }
-        }
-      `}</style>
-    </div>
+    </section>
   );
 };
 
