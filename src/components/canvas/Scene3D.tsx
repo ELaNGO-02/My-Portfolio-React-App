@@ -277,24 +277,39 @@ const Scene = () => (
 /* ═══════════════════════════════════════════════════
    CANVAS WRAPPER
    ═══════════════════════════════════════════════════ */
+/* ═══════════════════════════════════════════════════
+   LIGHTWEIGHT MOBILE SCENE — fewer particles, no shapes
+   ═══════════════════════════════════════════════════ */
+const MobileScene = () => (
+  <>
+    <fog attach="fog" args={['#05060f', 6, 50]} />
+    <ambientLight intensity={0.08} />
+    <pointLight position={[8, 5, 4]} color="#915eff" intensity={0.8} distance={40} />
+    <pointLight position={[-6, -4, 6]} color="#00bfff" intensity={0.6} distance={35} />
+    <NebulaStars count={1200} />
+    <EnergyStream radius={5} speed={0.3} color="#915eff" particleCount={80} />
+    <EnergyStream radius={8} speed={-0.2} color="#00bfff" particleCount={60} />
+    <GlowingOrb />
+    <InteractiveCamera />
+  </>
+);
+
 const Scene3D = () => {
-  const [show, setShow] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    if (window.innerWidth >= 640) setShow(true);
+    setIsMobile(window.innerWidth < 640);
   }, []);
-
-  if (!show) return null;
 
   return (
     <div className="fixed inset-0 z-0 pointer-events-none" aria-hidden="true">
       <Canvas
         camera={{ position: [0, 0, 14], fov: 55 }}
-        gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-        dpr={[1, 1.5]}
+        gl={{ antialias: !isMobile, alpha: true, powerPreference: isMobile ? 'low-power' : 'high-performance' }}
+        dpr={isMobile ? [1, 1] : [1, 1.5]}
       >
         <Suspense fallback={null}>
-          <Scene />
+          {isMobile ? <MobileScene /> : <Scene />}
         </Suspense>
         <Preload all />
       </Canvas>
